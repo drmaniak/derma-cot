@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "derma-cot"
+version = "0.1.0"
+authors = [
+  { name = "Manick Vennimalai", email = "manick.vennimalai@gmail.com" },
+]
+description = "Fine-tuning Vision LLMs for CoT reasoning on medical images of skin conditions"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "numpy",
+  "pandas",
+  "matplotlib",
+  "scipy",
+  "tqdm",
+  "torch",
+  "datasets",
+  "transformers",
+  "peft",
+  "wandb",
+  "ruff",
+  "fastapi[standard]",
+  "streamlit",
+  "pre-commit",
+  "pytest",
+]
+
+[project.urls]
+Repository = "https://github.com/drmaniak/derma-cot"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+exclude = ["notebooks", "tests"]
