@@ -7,6 +7,7 @@ name = "derma-cot"
 version = "0.1.0"
 authors = [
   { name = "Manick Vennimalai", email = "manick.vennimalai@gmail.com" },
+  { name = "Amir Jabarivasal", email = "amir1jab@gmail.com" },
 ]
 description = "Fine-tuning Vision LLMs for CoT reasoning on medical images of skin conditions"
 readme = "README.md"
