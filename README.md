@@ -9,6 +9,7 @@ Chain-of-Thought reasoning abilities for dermatological image analysis.
 
 - Python 3.12+
 - Git
+- uv
 
 ### Installation
 
@@ -22,21 +23,21 @@ Chain-of-Thought reasoning abilities for dermatological image analysis.
 2. Set up a virtual environment:
 
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   uv venv
+   source .venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. Install dependencies:
 
    ```bash
-   pip install -e .
+   uv sync
    ```
 
 4. Set up pre-commit hooks:
 
    ```bash
-   pip install pre-commit
    pre-commit install
+   pre-commit run --all-files
    ```
 
 ## Development Workflow
