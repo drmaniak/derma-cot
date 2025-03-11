@@ -28,6 +28,9 @@ dependencies = [
   "streamlit",
   "pre-commit",
   "pytest",
+  "jupyterlab",
+  "ipython",
+  "ipykernel",
 ]
 
 [project.urls]
