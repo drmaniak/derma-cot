@@ -14,119 +14,49 @@ from ratelimit import limits, sleep_and_retry
 from tqdm.auto import tqdm
 
 
-def create_context(row: dict[str, Any]):
-    # Parse skin conditions and weights
-    conditions = eval(row["skin_condition"])  # Convert string list to actual list
-    weights = eval(row["weighted_skin_label"])  # Convert string dict to actual dict
+def create_context(row):
+    # Extract core medical information
+    disease = row["disease"].strip().title()
+    caption = row["caption"].strip()
 
-    # 1. Skin Condition Section
-    if conditions:
-        condition_str = (
-            "Dermatological inspection of the physical characteristics of the subject in the image indicate that it could be the following conditions with the specified probabilities: "
-            + ", ".join([f"{cond} ({weights[cond] * 100:.0f}%)" for cond in conditions])
-            + "."
-        )
-    else:
-        condition_str = "The patient has submitted this image with details and symptoms reported below."
+    # 1. Disease Identification Section
+    disease_str = f"Diagnosis: {disease}"
 
-    # 2. Demographic Section
-    age_mapper = {
-        "AGE_UNKNOWN": "Unknown",
-        "AGE_18_TO_29": "18 to 29",
-        "AGE_40_TO_49": "40 to 49",
-        "AGE_50_TO_59": "50 to 59",
-        "AGE_70_TO_79": "70 to 79",
-        "AGE_60_TO_69": "60 to 69",
-        "AGE_30_TO_39": "30 to 39",
-        "nan": None,
-    }
+    # 2. Clinical Description Section
+    desc_str = f"Clinical Presentation: {caption}"
 
-    sex_mapper = {
-        "OTHER_OR_UNSPECIFIED": "Unknown",
-        "MALE": "Male",
-        "FEMALE": "Female",
-        "nan": None,
-    }
-
-    fitz_mapper = {
-        "FST2": "Type II",
-        "FST1": "Type I",
-        "FST4": "Type IV",
-        "nan": None,
-        "FST3": "Type III",
-        "FST5": "Type V",
-        "FST6": "Type VI",
-    }
-
-    monk_mapper = {
-        "1.0": "A (Light tone with reference hex colour code #f7ede4)",
-        "2.0": "B (Light tone with reference hex colour code #f3e7da)",
-        "3.0": "C (Light tone with reference hex colour code #f6ead0)",
-        "4.0": "D (Medium tone with reference hex colour code #ead9bb)",
-        "5.0": "E (Medium tone with reference hex colour code #d7bd96)",
-        "6.0": "F (Medium tone with reference hex colour code #9f7d54)",
-        "7.0": "G (Dark tone with reference hex colour code #815d44)",
-        "8.0": "H (Dark tone with reference hex colour code #604234)",
-        "9.0": "I (Dark tone with reference hex colour code #3a312a)",
-        "10.0": "J (Dark tone with reference hex colour code #2a2420)",
-        "nan": None,
-    }
-
-    demo_parts = []
-    fitz = fitz_mapper[row["fitzpatrick_type"]]
-    monk = monk_mapper[row["monk_skin_tone"]]
-    sex = sex_mapper[row["sex"]]
-    age = age_mapper[row["age_group"]]
-    if fitz not in [None, ""]:
-        if not monk:
-            demo_parts.append(f"Fitzpatrick skin type: {fitz}")
-    if monk not in [None, ""]:
-        demo_parts.append(f"Monk skin tone: {monk}")
-    if sex not in ["Unknown", None]:
-        demo_parts.append(f"Sex: {sex}")
-    if age not in ["Unknown", None]:
-        demo_parts.append(f"Age group: {age}")
-
-    demo_str = (
-        "Patient demographic details are as follows: " + ". ".join(demo_parts) + "."
-        if demo_parts
-        else ""
-    )
-
-    # 3. Self-reported Features Section
-    symptom_groups = {
-        "Skin Texture of affected parts": [
-            k for k in row if k.startswith("self_textures_") and row[k]
-        ],
-        "Body Parts with symptoms": [
-            k for k in row if k.startswith("self_body_parts_") and row[k]
-        ],
-        "Symptoms": [
-            k for k in row if k.startswith("self_condition_symptoms_") and row[k]
-        ],
-        "Other Symptoms": [
-            k for k in row if k.startswith("self_other_symptoms_") and row[k]
-        ],
-    }
-
-    symptom_strs = []
-    for group_name, features in symptom_groups.items():
-        if features:
-            clean_features = [
-                f.replace("self_textures_", "")
-                .replace("self_body_parts_", "")
-                .replace("self_condition_symptoms_", "")
-                .replace("self_other_symptoms_", "")
-                .replace("_", " ")
-                .title()
-                for f in features
-            ]
-            symptom_strs.append(f"{group_name}: {', '.join(clean_features)}")
-
-    symptom_str = "\n".join(symptom_strs) if symptom_strs else ""
+    # # 3. Additional Context Section
+    #  context_parts = []
+    #
+    # # Handle skin tone mapping if available
+    # if str(row['skin_tone']) not in ['nan', 'None', '']:
+    #     skin_tone = row['skin_tone']
+    #     if skin_tone.startswith('FST'):
+    #         context_parts.append(f"Fitzpatrick Skin Type: {skin_tone.replace('FST', 'Type ')}")
+    #     else:
+    #         context_parts.append(f"Skin Tone: {skin_tone}")
+    #
+    # # Add data source if relevant
+    # if str(row['source']) not in ['nan', 'None', '']:
+    #     source_map = {
+    #         'fitzpatrick17k': 'Fitzpatrick 17k dataset',
+    #         'dermnet': 'DermNet NZ',
+    #         'ddi': 'DDI Dataset'
+    #     }
+    #     clean_source = source_map.get(row['source'].lower(), row['source'])
+    #     context_parts.append(f"Source: {clean_source}")
+    #
+    context_str = ""
+    # if context_parts:
+    #     context_str = "\nAdditional Context: " + "; ".join(context_parts)
 
     # Combine all sections
-    final_context = f"{condition_str}\n{demo_str}\n{symptom_str}".strip()
+    final_context = f"{disease_str}\n{desc_str}\n{context_str}"
+
+    # Handle special remark cases
+    if str(row["remark"]) not in ["nan", "None", ""]:
+        final_context += f"\nClinician Remark: {row['remark'].capitalize()}"
+
     return final_context
 
 
@@ -169,10 +99,9 @@ def create_messages(row: dict[str, Any]):
                              making use of the details found in:\n\n{context}\n\nConsider the following aspects:
                              - Primary visual characteristics
                              - Differential diagnosis probabilities
-                             - Demographic correlations
                              - Reported symptoms
                              Begin your answer with an in-depth description of the physical features of this image as they pertain to a dermatological analysis.
-                             If there are no provided differential diagnosis probabilities, then only make conservative suggestions about the diagnosis.""",
+                             If there is no provided differential diagnosis, then only make conservative suggestions about the diagnosis.""",
                 },
                 {
                     "type": "image_url",
@@ -203,8 +132,8 @@ def analyze_skin(row: dict[str, Any], client: OpenAI):
         )
         return response.choices[0].message.content
     except Exception as e:
-        case_id = row.get("case_id", "unknown")
-        print(f"\nError processing case {case_id}: {str(e)}")
+        skincap_id = row.get("skincap_file_path", "unknown")
+        print(f"\nError processing case {skincap_id}: {str(e)}")
         # If rate limit error, suggest waiting
         if "rate limit" in str(e).lower():
             print("Rate limit exceeded. Waiting for 60 seconds before retrying...")
@@ -248,7 +177,7 @@ def process_sample(args: tuple[int, dict, OpenAI, int]):
                 return idx, None
 
 
-def get_scin_labels(
+def get_skincap_labels(
     filepath: Path,
     output_path: Path | Any = None,
     hf_repo_id: str | Any = None,
@@ -260,13 +189,13 @@ def get_scin_labels(
     max_retries: int = 3,  # Maximum number of retries per sample
 ):
     # Load dataset from disk
-    print(f"Loading the SCIN dataset from {filepath}...")
-    scin = load_from_disk(filepath)
+    print(f"Loading the SkinCAP dataset from {filepath}...")
+    scap = load_from_disk(filepath)
 
     # If in trial mode, only use a subset of the dataset
     if trial_mode:
         print(f"Running in trial mode with {trial_size} samples")
-        scin = scin.select(range(min(trial_size, len(scin))))  # type: ignore
+        scap = scap.select(range(min(trial_size, len(scap))))  # type: ignore
 
     # Initialize an OpenAI client
     client = OpenAI(
@@ -281,18 +210,18 @@ def get_scin_labels(
     )
 
     # Create a list to store all labels
-    all_labels = [""] * len(scin)
+    all_labels = [""] * len(scap)
 
-    print(f"Processing {len(scin)} samples with {max_workers} concurrent workers...")
+    print(f"Processing {len(scap)} samples with {max_workers} concurrent workers...")
 
     # Process all samples with progress bar
-    progress_bar = tqdm(total=len(scin), desc="Processing samples")
+    progress_bar = tqdm(total=len(scap), desc="Processing samples")
 
     # Process in batches to allow checkpointing
-    for batch_start in range(0, len(scin), batch_size):
-        batch_end = min(batch_start + batch_size, len(scin))
+    for batch_start in range(0, len(scap), batch_size):
+        batch_end = min(batch_start + batch_size, len(scap))
         batch_indices = list(range(batch_start, batch_end))
-        batch_rows = [scin[idx] for idx in batch_indices]
+        batch_rows = [scap[idx] for idx in batch_indices]
 
         # Prepare arguments for concurrent processing
         process_args = [
@@ -314,7 +243,7 @@ def get_scin_labels(
 
         # Save checkpoint after each batch
         if output_path:
-            checkpoint_dataset = scin.add_column("label", all_labels)  # type: ignore
+            checkpoint_dataset = scap.add_column("label", all_labels)  # type: ignore
             checkpoint_path = output_path / f"checkpoint_{batch_start}"
             print(f"\nSaving checkpoint to {checkpoint_path}...")
             checkpoint_dataset.save_to_disk(checkpoint_path)
@@ -322,7 +251,7 @@ def get_scin_labels(
     progress_bar.close()
 
     # Add the labels column to the dataset
-    final_dataset = scin.add_column("label", all_labels)  # type: ignore
+    final_dataset = scap.add_column("label", all_labels)  # type: ignore
 
     # Save final dataset locally if output_path is provided
     if output_path:
@@ -397,7 +326,7 @@ def main():
         args.output_path.mkdir(parents=True, exist_ok=True)
 
     # Process the dataset
-    scin = get_scin_labels(
+    scap = get_skincap_labels(
         filepath=args.filepath,
         output_path=args.output_path,
         hf_repo_id=args.hf_repo_id,
@@ -410,7 +339,7 @@ def main():
     )
 
     print("Processing completed successfully!")
-    return scin
+    return scap
 
 
 if __name__ == "__main__":
