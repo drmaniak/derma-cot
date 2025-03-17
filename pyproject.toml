@@ -31,6 +31,8 @@ dependencies = [
   "jupyterlab",
   "ipython",
   "ipykernel",
+  "openai>=1.66.3",
+  "ratelimit>=2.2.1",
 ]
 
 [project.urls]
