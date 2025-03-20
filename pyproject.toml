@@ -34,6 +34,8 @@ dependencies = [
   "openai>=1.66.3",
   "ratelimit>=2.2.1",
   "unsloth>=2025.3.17",
+  "jupyterlab-vim>=4.1.4",
+  "catppuccin-jupyterlab>=0.2.4",
 ]
 
 [project.urls]
