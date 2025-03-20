@@ -33,6 +33,7 @@ dependencies = [
   "ipykernel",
   "openai>=1.66.3",
   "ratelimit>=2.2.1",
+  "unsloth>=2025.3.17",
 ]
 
 [project.urls]
